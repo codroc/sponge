@@ -12,6 +12,17 @@ class ByteStream {
   private:
     // Your code here -- add private members as necessary.
 
+    std::string _bytes;
+    size_t _capacity{};
+    size_t _writePos{};
+    size_t _readPos{};
+
+    size_t _hasWrited{};
+    size_t _hasReaded{};
+
+    bool _writeClosed{};
+    void noCap();
+    size_t writeable() const;
     // Hint: This doesn't need to be a sophisticated data structure at
     // all, but if any of your tests are taking longer than a second,
     // that's a sign that you probably want to keep exploring

@@ -3,12 +3,35 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
 void get_URL(const string &host, const string &path) {
     // Your code here.
 
+    // 构建一个 TCPSocket
+    TCPSocket tcp_sock;
+    tcp_sock.connect({host, "http"});
+    // 此时 tcp_sock 已经连接上 host:https 了
+    //
+    // 构造一个 HTTP request
+    stringstream ss;
+    ss << "GET " << path << " "
+       << "HTTP/1.1"
+       << "\r\n"
+       << "Host: " << host << "\r\n"
+       << "Connection: close"
+       << "\r\n"
+       << "\r\n";
+    tcp_sock.write(ss.str());
+    std::string ret = tcp_sock.read();
+    while (!ret.empty()) {
+        cout << ret;
+        ret = tcp_sock.read();
+    }
+
+    return;
     // You will need to connect to the "http" service on
     // the computer whose name is in the "host" string,
     // then request the URL path given in the "path" string.
