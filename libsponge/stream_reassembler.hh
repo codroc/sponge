@@ -58,11 +58,20 @@ class StreamReassembler {
     // 合并碎片，可能会有多个碎片和输入碎片重叠
     void merge(Node node);
 
+    // param a: start_iterator of node which is going to be delete
+    // param b: end_iterator of node which is going to be delete
+    // param node: the node which is going to be insert
     void update_unassembled_bytes(SetType::iterator a, SetType::iterator b, const Node& node) {
         uint32_t total = 0;
         for (auto it = a; it != b; ++it)
             total += it->length;
         _unassembled_bytes += node.length - total;
+    }
+
+    void update_storage(SetType::iterator a, SetType::iterator b, const Node& node) {
+        update_unassembled_bytes(a, b, node);
+        _aux_storage.erase(a, b);
+        _aux_storage.insert(node);
     }
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.

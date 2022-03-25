@@ -34,145 +34,107 @@ void StreamReassembler::merge(StreamReassembler::Node node) {
             _aux_storage.insert(node);
             update_unassembled_bytes(_aux_storage.end(), _aux_storage.end(), node);
             return;
-        } else if (pre->end() >= node.end()) { return; }
-        std::string tmp = *pre->spStr + 
-            node.spStr->substr(pre->end() - node.index);
-        node.spStr.reset(
-                new std::string(std::move(tmp))
-                );
-        node.index = pre->index;
-        node.length = node.spStr->size();
+        } else if (pre->end() < node.end()) {
+            std::string tmp = *pre->spStr + 
+                node.spStr->substr(pre->end() - node.index);
+            node.spStr.reset(
+                    new std::string(std::move(tmp))
+                    );
+            node.index = pre->index;
+            node.length = node.spStr->size();
 
-        _aux_storage.erase(pre);
-        _aux_storage.insert(node);
-        auto begin = pre;
-        auto end   = ++pre;
-        update_unassembled_bytes(begin, end, node);
-        return;
-    }
-    if (pre == _aux_storage.begin()) {
+            _aux_storage.erase(pre);
+            _aux_storage.insert(node);
+            auto begin = pre;
+            auto end   = ++pre;
+            update_unassembled_bytes(begin, end, node);
+        }
+    } else if (pre == _aux_storage.begin()) {
         // 无前
         auto it = pre;
         while (it != _aux_storage.end()) {
             if (it->end() > node.end()) break;
             ++it;
         }
-        if (it == _aux_storage.end()) {
-            update_unassembled_bytes(_aux_storage.begin(), _aux_storage.end(), node);
-            _aux_storage.clear();
-            _aux_storage.insert(node);
-            return;
-        }
+        if (it == _aux_storage.end())
+            update_storage(_aux_storage.begin(), _aux_storage.end(), node);
         // 无前，有后
-        if (it->index > node.end()) {
-            update_unassembled_bytes(pre, it, node);
-            _aux_storage.erase(pre, it);
-            _aux_storage.insert(node);
-            return;
-        } else {
-            node.spStr.reset(
-                    new std::string(*node.spStr + 
-                        it->spStr->substr(
-                            node.end() - it->index
-                            )
-                        )
-                    );
+        else if (it->index > node.end())
+            update_storage(pre, it, node);
+        else {
+            node.spStr.reset(new std::string(*node.spStr + it->spStr->substr(node.end() - it->index)));
             node.length = node.spStr->size();
             ++it;
-            update_unassembled_bytes(pre, it, node);
-            _aux_storage.erase(pre, it);
-            _aux_storage.insert(node);
-            return;
-        }
-    }
-    // pre 在中间
-    auto it = pre;
-    while (it != _aux_storage.end()) {
-        if (it->end() > node.end()) break;
-        ++it;
-    }
-    if (it == _aux_storage.end()) {
-        // 有前，无后
-        auto t = --pre;
-        if (t->end() < node.index) {
-            ++t;
-            update_unassembled_bytes(t, it, node);
-            _aux_storage.erase(t, it);
-            _aux_storage.insert(node);
-            return;
-        } else {
-            node.spStr.reset(
-                    new std::string(*t->spStr + 
-                        node.spStr->substr(
-                            t->end() - node.index
-                            )
-                        )
-                    );
-            node.index = t->index;
-            update_unassembled_bytes(t, it, node);
-            _aux_storage.erase(t, it);
-            _aux_storage.insert(node);
-            return;
+            update_storage(pre, it, node);
         }
     } else {
-        // 有前，有后
-        auto a = --pre;
-        auto b = it;
-        if (a->end() < node.index && node.end() < b->index) {
-            ++a;
-            update_unassembled_bytes(a, b, node);
-            _aux_storage.erase(a, b);
-            _aux_storage.insert(node);
-            return;
-        } else if (a->end() < node.index) {
-            node.spStr.reset(
-                    new std::string(*node.spStr + 
-                        b->spStr->substr(
-                            node.end() - b->index
+        // pre 在中间
+        auto it = pre;
+        while (it != _aux_storage.end()) {
+            if (it->end() > node.end()) break;
+            ++it;
+        }
+        if (it == _aux_storage.end()) {
+            // 有前，无后
+            auto t = --pre;
+            if (t->end() < node.index) {
+                ++t;
+            } else {
+                node.spStr.reset(
+                        new std::string(*t->spStr + 
+                            node.spStr->substr(
+                                t->end() - node.index
+                                )
                             )
-                        )
-                    );
-            node.length = node.spStr->size();
-
-            ++a;
-            ++b;
-            update_unassembled_bytes(a, b, node);
-            _aux_storage.erase(a, b);
-            _aux_storage.insert(node);
-            return;
-        } else if (node.end() < b->index) {
-            if (a->end() >= node.end()) return;
-            node.spStr.reset(
-                    new std::string(*a->spStr + 
-                        node.spStr->substr(
-                            a->end() - node.index
-                            )
-                        )
-                    );
-            node.index = a->index;
-            node.length = node.spStr->size();
-
-            update_unassembled_bytes(a, b, node);
-            _aux_storage.erase(a, b);
-            _aux_storage.insert(node);
-            return;
+                        );
+                node.index = t->index;
+            }
+            update_storage(t, it, node);
         } else {
-            node.spStr.reset(
-                    new std::string(*a->spStr + 
-                        node.spStr->substr(
-                            a->end() - node.index
-                            ) + 
-                    b->spStr->substr(node.end() - b->index)
-                        )
-                    );
-            node.index = a->index;
-            node.length = node.spStr->size();
+            // 有前，有后
+            auto a = --pre;
+            auto b = it;
+            if (a->end() < node.index && node.end() < b->index) {
+                ++a;
+            } else if (a->end() < node.index) {
+                node.spStr.reset(
+                        new std::string(*node.spStr + 
+                            b->spStr->substr(
+                                node.end() - b->index
+                                )
+                            )
+                        );
+                node.length = node.spStr->size();
 
-            ++b;
-            update_unassembled_bytes(a, b, node);
-            _aux_storage.erase(a, b);
-            _aux_storage.insert(node);
-            return;
+                ++a;
+                ++b;
+            } else if (node.end() < b->index) {
+                if (a->end() >= node.end()) return;
+                node.spStr.reset(
+                        new std::string(*a->spStr + 
+                            node.spStr->substr(
+                                a->end() - node.index
+                                )
+                            )
+                        );
+                node.index = a->index;
+                node.length = node.spStr->size();
+
+            } else {
+                node.spStr.reset(
+                        new std::string(*a->spStr + 
+                            node.spStr->substr(
+                                a->end() - node.index
+                                ) + 
+                            b->spStr->substr(node.end() - b->index)
+                            )
+                        );
+                node.index = a->index;
+                node.length = node.spStr->size();
+
+                ++b;
+            }
+            update_storage(a, b, node);
         }
     }
 }
