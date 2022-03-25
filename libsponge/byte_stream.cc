@@ -21,8 +21,7 @@ ByteStream::ByteStream(const size_t capacity) : _bytes(), _capacity(capacity) {
 
 size_t ByteStream::write(const string &data) {
     size_t writed = 0;
-    int remain = writeable();
-    if (remain == 0)
+    if (writeable() < data.size())
         noCap();
 
     int need_write = writeable() > data.size() ? data.size() : writeable();
@@ -58,7 +57,7 @@ std::string ByteStream::read(const size_t len) {
 void ByteStream::noCap() {
     if (buffer_size() == _capacity)
         return;
-    _bytes = _bytes.substr(_readPos, _writePos);
+    _bytes = _bytes.substr(_readPos, buffer_size());
     _readPos = 0;
     _writePos = _bytes.size();
     _bytes.resize(_capacity);
