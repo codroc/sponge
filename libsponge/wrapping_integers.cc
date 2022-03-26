@@ -1,4 +1,5 @@
 #include "wrapping_integers.hh"
+#include <cmath>
 
 // Dummy implementation of a 32-bit wrapping integer
 
@@ -14,8 +15,7 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
-    DUMMY_CODE(n, isn);
-    return WrappingInt32{0};
+    return isn + static_cast<uint32_t>(n % (1ul << 32));
 }
 
 //! Transform a WrappingInt32 into an "absolute" 64-bit sequence number (zero-indexed)
@@ -29,6 +29,22 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
-    DUMMY_CODE(n, isn, checkpoint);
-    return {};
+    int times = checkpoint >> 32;
+    uint64_t diff = n.raw_value() - isn.raw_value();
+    if (times == 0) {
+        return abs(static_cast<int64_t>(checkpoint - diff)) < 
+            abs(static_cast<int64_t>(checkpoint - (diff + (1ul << 32)))) ? 
+            diff : diff + (1ul<<32);
+    }
+    int u = times - 1;
+    uint64_t mindiff = static_cast<uint64_t>
+        (abs(static_cast<int64_t>(checkpoint - (diff + u * (1ul << 32)))));
+    for (int j = times - 1;j <= times + 1;++j) {
+        if (static_cast<uint64_t>(abs(static_cast<int64_t>(checkpoint - (diff + j * (1ul << 32))))) < mindiff) {
+            u = j;
+            mindiff = static_cast<uint64_t>
+                (abs(static_cast<int64_t>(checkpoint - (diff + u * (1ul << 32)))));
+        }
+    }
+    return diff + u * (1ul << 32);
 }
