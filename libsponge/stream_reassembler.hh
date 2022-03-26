@@ -13,13 +13,13 @@
 class StreamReassembler {
   public:
     struct Node {
-        Node(size_t idx, uint32_t l, std::shared_ptr<std::string> sp)
+        Node(size_t idx, size_t l, std::shared_ptr<std::string> sp)
             : index(idx),
               length(l),
               spStr(std::move(sp))
         {}
         size_t index;
-        uint32_t length;
+        size_t length;
         std::shared_ptr<std::string> spStr;
         size_t end() const { return index + length; }
     };
@@ -29,9 +29,9 @@ class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
     using SetType = std::set<Node, NodeCmp>;
-    uint32_t _rcv_base{0}; // 下一个起始索引
-    uint32_t _eof_index{0xffffffff};
-    uint32_t _unassembled_bytes{0};
+    size_t _rcv_base{0}; // 下一个起始索引
+    size_t _eof_index{0xffffffff};
+    size_t _unassembled_bytes{0};
 
     SetType _aux_storage;
 
@@ -44,10 +44,10 @@ class StreamReassembler {
     get_valid_data(const std::string& data, const size_t index);
 
     // remain capacity
-    uint32_t remain_capacity() const { return _capacity - _unassembled_bytes - _output.buffer_size(); }
+    size_t remain_capacity() const { return _capacity - _unassembled_bytes - _output.buffer_size(); }
     
     // 把数据交付给 ByteStream，并更新 aux_storage
-    uint32_t update();
+    size_t update();
 
     // 把数据写到 aux_storage
     // 会出现几种情况
@@ -62,7 +62,7 @@ class StreamReassembler {
     // param b: end_iterator of node which is going to be delete
     // param node: the node which is going to be insert
     void update_unassembled_bytes(SetType::iterator a, SetType::iterator b, const Node& node) {
-        uint32_t total = 0;
+        size_t total = 0;
         for (auto it = a; it != b; ++it)
             total += it->length;
         _unassembled_bytes += node.length - total;

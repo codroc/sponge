@@ -148,7 +148,7 @@ void StreamReassembler::write_to_aux_storage(std::pair<size_t, std::string> p) {
     // _unassembled_bytes += tmp.size();
     merge(node);
 }
-uint32_t StreamReassembler::update() {
+size_t StreamReassembler::update() {
     auto it = _aux_storage.begin();
     // assert(it->index == _rcv_base);
     size_t writed = _output.write(*it->spStr);
@@ -157,7 +157,7 @@ uint32_t StreamReassembler::update() {
     if (writed == it->length) {
         _aux_storage.erase(it);
     } else {
-        Node node = {ret, it->length - static_cast<uint32_t>(writed), 
+        Node node = {ret, it->length - static_cast<size_t>(writed), 
             std::make_shared<std::string>
                 (it->spStr->substr(writed))
                 };
