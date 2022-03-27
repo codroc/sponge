@@ -28,16 +28,13 @@ class TCPReceiver {
     };
     Status _status;
     WrappingInt32 _peer_isn;
-    // size_t _byte_stream_rcv_base{0}; // byte stream index (from zero)
   private:
     // 必须要收到 SYN 后才能被调用
     // 调用者 有责任 做以下判断 assert(_status == Status::SYN_RECEIVED);
     uint64_t fromByteStreamIndex() const {
-        return _status == Status::FIN_RECEIVED && 
-            stream_out().input_ended() ? 
+        return stream_out().input_ended() ? 
             stream_out().bytes_written() + 2 : 
             stream_out().bytes_written() + 1;
-//            return stream_out().bytes_written() + 1;
     }
     WrappingInt32 getPeerISN() const { return _peer_isn; }
     void do_is_fin(bool);

@@ -31,14 +31,10 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
         } else return;
     } else {
         // 已经收到 SYN 了
-        // 如果是冗余的 TCPSegment
-        // if (unwrap(seg.header().seqno, getPeerISN(), getCheckpoint()) < 
-        //         unwrap(*ackno(), getPeerISN(), getCheckpoint())) return;
-
         do_is_fin(seg.header().fin);
         size_t asn = unwrap(seg.header().seqno, _peer_isn, getCheckpoint());
+        // 如果收到的是 SYN TCP segment 但是我现在已经处于 SYN_RECEIVED 状态了！
         if (asn == 0) return;
-        // size_t byte_stream_index = asn ? asn - 1 : 0;
         size_t byte_stream_index = asn - 1;
         _reassembler.push_substring(seg.payload().copy(), 
                 byte_stream_index, 
