@@ -20,12 +20,42 @@ class TCPReceiver {
     //! The maximum number of bytes we'll store.
     size_t _capacity;
 
+    enum class Status {
+        WAIT_SYN,
+        SYN_RECEIVED,
+        FIN_RECEIVED,
+        ERROR
+    };
+    Status _status;
+    WrappingInt32 _peer_isn;
+    // size_t _byte_stream_rcv_base{0}; // byte stream index (from zero)
+  private:
+    // 必须要收到 SYN 后才能被调用
+    // 调用者 有责任 做以下判断 assert(_status == Status::SYN_RECEIVED);
+    uint64_t fromByteStreamIndex() const {
+        return _status == Status::FIN_RECEIVED && 
+            stream_out().input_ended() ? 
+            stream_out().bytes_written() + 2 : 
+            stream_out().bytes_written() + 1;
+//            return stream_out().bytes_written() + 1;
+    }
+    WrappingInt32 getPeerISN() const { return _peer_isn; }
+    void do_is_fin(bool);
+    uint64_t getCheckpoint() const {
+        uint64_t written = stream_out().bytes_written();
+        return  written ? written - 1 : 0;
+    }
   public:
     //! \brief Construct a TCP receiver
     //!
     //! \param capacity the maximum number of bytes that the receiver will
     //!                 store in its buffers at any give time.
-    TCPReceiver(const size_t capacity) : _reassembler(capacity), _capacity(capacity) {}
+    TCPReceiver(const size_t capacity)
+        : _reassembler(capacity), 
+          _capacity(capacity),
+          _status(Status::WAIT_SYN),
+          _peer_isn(0)
+    {}
 
     //! \name Accessors to provide feedback to the remote TCPSender
     //!@{
