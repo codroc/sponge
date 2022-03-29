@@ -9,6 +9,23 @@
 #include <functional>
 #include <queue>
 
+class RTimer {
+public:
+    RTimer() = default;
+    void start(uint32_t to) {
+        _time_out = to;
+        _started = true;
+    }
+    void stop() { _started = false; }
+    uint32_t time_out() const { return _time_out; }
+    
+    bool is_time_out(size_t t) const { return _started && t >= _time_out; }
+    bool started() const { return _started; }
+private:
+    bool _started{};
+    uint32_t _time_out{};
+};
+
 //! \brief The "sender" part of a TCP implementation.
 
 //! Accepts a ByteStream, divides it up into segments and sends the
@@ -32,6 +49,34 @@ class TCPSender {
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
 
+    // my code:
+    RTimer _timer;
+
+    std::queue<TCPSegment> _outstandings;
+
+    size_t _ms_since_alive{};
+
+    unsigned int _rtx{}; // consective retransmission times
+
+    uint64_t _checkpoint{};
+
+    uint16_t _win_size{1};
+
+    unsigned int _rto; // retransmission time out
+
+    bool _peer_busy{};
+
+    uint64_t _bytes_in_flight{};
+
+    bool _fin_sended{};
+  private:
+    TCPSegment make_segment(std::string&& payload, bool syn, bool fin);
+    WrappingInt32 get_seqno();
+    uint64_t get_absolute_seqno(WrappingInt32, WrappingInt32, uint64_t) const;
+    bool space_available() const { return _win_size > 0; }
+    bool is_peer_busy() const { return _peer_busy; }
+
+    void send_and_store(std::string&& payload, bool syn, bool fin);
   public:
     //! Initialize a TCPSender
     TCPSender(const size_t capacity = TCPConfig::DEFAULT_CAPACITY,
